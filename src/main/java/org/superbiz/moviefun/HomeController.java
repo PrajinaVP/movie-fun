@@ -1,6 +1,10 @@
 package org.superbiz.moviefun;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.superbiz.moviefun.albums.Album;
 import org.superbiz.moviefun.albums.AlbumFixtures;
@@ -18,12 +22,21 @@ public class HomeController {
     private final AlbumsBean albumsBean;
     private final MovieFixtures movieFixtures;
     private final AlbumFixtures albumFixtures;
+    private final PlatformTransactionManager albumsTransactionManager;
+    private final PlatformTransactionManager moviesTransactionManager;
 
-    public HomeController(MoviesBean moviesBean, AlbumsBean albumsBean, MovieFixtures movieFixtures, AlbumFixtures albumFixtures) {
+    public HomeController(MoviesBean moviesBean,
+                          AlbumsBean albumsBean,
+                          MovieFixtures movieFixtures,
+                          AlbumFixtures albumFixtures,
+                          PlatformTransactionManager albumsTransactionManager,
+                          PlatformTransactionManager moviesTransactionManager) {
         this.moviesBean = moviesBean;
         this.albumsBean = albumsBean;
         this.movieFixtures = movieFixtures;
         this.albumFixtures = albumFixtures;
+        this.albumsTransactionManager = albumsTransactionManager;
+        this.moviesTransactionManager = moviesTransactionManager;
     }
 
     @GetMapping("/")
@@ -33,13 +46,25 @@ public class HomeController {
 
     @GetMapping("/setup")
     public String setup(Map<String, Object> model) {
-        for (Movie movie : movieFixtures.load()) {
-            moviesBean.addMovie(movie);
-        }
+        new TransactionTemplate(moviesTransactionManager).execute(new TransactionCallback<Object>() {
+            @Override
+            public Object doInTransaction(TransactionStatus transactionStatus) {
+                for (Movie movie : movieFixtures.load()) {
+                    moviesBean.addMovie(movie);
+                }
+                return null;
+            }
+        });
 
-        for (Album album : albumFixtures.load()) {
-            albumsBean.addAlbum(album);
-        }
+        new TransactionTemplate(albumsTransactionManager).execute(new TransactionCallback<Object>() {
+            @Override
+            public Object doInTransaction(TransactionStatus transactionStatus) {
+                for (Album album : albumFixtures.load()) {
+                    albumsBean.addAlbum(album);
+                }
+                return null;
+            }
+        });
 
         model.put("movies", moviesBean.getMovies());
         model.put("albums", albumsBean.getAlbums());
