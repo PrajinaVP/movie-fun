@@ -1,3 +1,9 @@
+rabbitmq:
+  queue: my-rabbit-queue
+logging.level:
+  root: WARN
+  org.superbiz.moviefun: DEBUG
+
 spring:
   jpa:
     generate-ddl: true
@@ -10,6 +16,3 @@ spring:
     prefix: /WEB-INF/
     suffix: .jsp
 
-logging.level:
-  root: WARN
-  org.superbiz.moviefun: DEBUG
